@@ -5,22 +5,50 @@ function setup() {
   colorMode(HSB, 100)
   
   b1 = new Bob({
-    x: 500,
+    x: 200,
     y: 100,
-    size: 5,
+    size: 30,
     link: [
     ],
     ay: 0.0,
     mass: 1
   })
   b2 = new Bob({
-    x: 200,
-    y: 400,
-    size: 15,
+    x: 100,
+    y: 100,
+    size: 25,
     link: [
-      [b1,30,1]
+      [b1,30]
     ],
-    ay: 0.0,
+    mass: 1
+  })
+  b3 = new Bob({
+    x: 100,
+    y: 100,
+    size: 20,
+    link: [
+      [b2,50,1]
+    ],
+    mass: 1
+  })
+  b4 = new Bob({
+    x: 200,
+    y: 100,
+    size: 20,
+    link: [
+      [b3,50,1],
+      [b2,50,1]
+    ],
+    mass: 1
+  })
+  b5 = new Bob({
+    x: 201,
+    y: 200,
+    size: 20,
+    link: [
+      [b3,50,1],
+      [b4,50,1]
+    ],
     mass: 1
   })
   
@@ -51,8 +79,8 @@ class Bob {
     color = [30, 100, 100],
     mass = 1,
     size = 1,
-    damping = 0.1,
-    k = 0.1,
+    damping = 0.4,
+    k = 0.2,
     link = []
   }) {
     this.l = createVector(x, y)
@@ -106,7 +134,6 @@ class Bob {
         this.links[i][0].links.push([this,this.links[i][1]])
       }
     }
-    console.log(this.links)
   }
   
 }
