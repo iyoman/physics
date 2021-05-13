@@ -3,7 +3,8 @@ function setup() {
   textSize(window.innerHeight / 20);
   curveTightness(0);
   colorMode(HSB, 100);
-  new Wall(50, 500, 300, 500);
+  new Wall(0, 200, 800, 200);
+  new Wall(270,500,800,200)
   new Dot(200, 50, 1, 0, 0, 10, 5);
 }
 
@@ -44,8 +45,6 @@ class Dot {
     this.y = this.l.y;
     this.py = this.pl.y;
     this.px = this.pl.x;
-    this.m = (this.py - this.y) / (this.px - this.x);
-    this.b = this.y - this.m * this.x;
     for (var i = 0; i< wallist.length; i++) {
       let wall = wallist[i];
       if (
@@ -53,6 +52,8 @@ class Dot {
         btwn(wall.ab1.y, wall.ab2.y, this.y)
       ) 
       {
+        this.m = (this.py - this.y) / (this.px - this.x);
+        this.b = this.y - this.m * this.x;
         if (isFinite(this.m) == false) {
           //tests for vertical slopes
           this.cx = this.x;
@@ -71,6 +72,7 @@ class Dot {
         ) {
           this.v.reflect(wall.vec.copy().rotate(HALF_PI));
           this.l.add(this.v);
+          this.v.mult(wall.damping)
         }
       }
     } //end of for loop
@@ -97,6 +99,7 @@ class Wall {
     let abw = 20;
     this.ab1 = createVector(min(ax, bx) - abw, min(ay, by) - abw);
     this.ab2 = createVector(max(ax, bx) + abw, max(ay, by) + abw);
+    this.damping = 0.9
     wallist.push(this);
     mainlist.push(this);
   }
@@ -153,6 +156,10 @@ function keyTyped() {
   } else {
     dt = 1;
   }
+}
+
+function mouseDragged() {
+  new Dot(mouseX, mouseY, 1, 0, 0, 10, 5)
 }
 
 function textwall(x, y, ...args) {
