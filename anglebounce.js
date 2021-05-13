@@ -3,9 +3,7 @@ function setup() {
   textSize(window.innerHeight / 20);
   curveTightness(0);
   colorMode(HSB, 100);
-  new Wall(0, 200, 800, 200);
-  new Wall(270,500,800,200)
-  new Dot(200, 50, 1, 0, 0, 10, 5);
+  new Wall(0,200,800,200)
 }
 
 var dotslist = [];
@@ -15,6 +13,8 @@ var energy = [];
 var fpms = 10;
 var dt = 1;
 var g = 0.2;
+var down = 0;
+var active = 0;
 
 class Dot {
   constructor(x, y, mass, xsp, ysp, color, size) {
@@ -43,40 +43,13 @@ class Dot {
     this.l.add(this.v.x * dt, this.v.y * dt);
     this.x = this.l.x;
     this.y = this.l.y;
-    this.py = this.pl.y;
-    this.px = this.pl.x;
-    for (var i = 0; i< wallist.length; i++) {
-      let wall = wallist[i];
-      if (
-        btwn(wall.ab1.x, wall.ab2.x, this.x) &&
-        btwn(wall.ab1.y, wall.ab2.y, this.y)
-      ) 
-      {
-        this.m = (this.py - this.y) / (this.px - this.x);
-        this.b = this.y - this.m * this.x;
-        if (isFinite(this.m) == false) {
-          //tests for vertical slopes
-          this.cx = this.x;
-        } else if (isFinite(wall.m) == false) {
-          this.cx = wall.ax;
-        } else {
-          this.cx = (wall.b - this.b) / (this.m - wall.m);
-        }
-        this.cy = wall.m * this.cx + wall.b;
-        if (
-          //collision check
-          btwn(this.x, this.px, this.cx) &&
-          btwn(this.y, this.py, this.cy) &&
-          btwn(wall.ax, wall.bx, this.cx) &&
-          btwn(wall.ay, wall.by, this.cy)
-        ) {
-          this.v.reflect(wall.vec.copy().rotate(HALF_PI));
-          this.l.add(this.v);
-          this.v.mult(wall.damping)
-        }
-      }
-    } //end of for loop
-    //end of update
+    if (this.y > 1000) {
+      let index = mainlist.indexOf(this);
+      mainlist.splice(index, 1);
+    }
+    collide(this);
+    collide(this);
+    this.nocol = 0
   }
 
   render() {
@@ -99,7 +72,7 @@ class Wall {
     let abw = 20;
     this.ab1 = createVector(min(ax, bx) - abw, min(ay, by) - abw);
     this.ab2 = createVector(max(ax, bx) + abw, max(ay, by) + abw);
-    this.damping = 0.9
+    this.damping = 0.9;
     wallist.push(this);
     mainlist.push(this);
   }
@@ -116,10 +89,6 @@ class Wall {
     stroke(60, 100, 70);
     strokeWeight(5);
     line(this.ax, this.ay, this.bx, this.by);
-    fill("green");
-    stroke("green");
-    point(this.ab1.x, this.ab1.y);
-    point(this.ab2.x, this.ab2.y);
     pop();
   }
 }
@@ -139,16 +108,33 @@ function draw() {
   textwall(
     windowWidth - 150,
     20,
-    ["Wallm", wallist[0].b],
-    ["vel", dotslist[0].v.y],
-    ["cy", dotslist[0].cy],
-    ["dotm", dotslist[0].m],
+    ["active", active],
     ["moux", mouseX],
     ["mouy", mouseY],
-    ["ballpos", dotslist[0].l.y],
-    ["ab1", wallist[0].ab1.y]
+    ["len", mainlist.length]
   );
-}
+  //mouse sensing
+  if (active == 1) {
+    if (mouseIsPressed && keyIsDown(16)) {
+      if (down == 0) {
+        x1 = mouseX;
+        y1 = mouseY;
+      }
+      down = 1;
+      push();
+      fill(40);
+      stroke(67, 20, 100, 50);
+      strokeWeight(50);
+      line(x1, y1, mouseX, mouseY);
+      pop();
+    } else if (down == 1) {
+      new Wall(x1, y1, mouseX, mouseY);
+      down = 0;
+    } else if (mouseIsPressed) {
+      new Dot(mouseX, mouseY, 1, 0, 0, 0, 5);
+    }
+  }
+} //end of draw loop
 
 function keyTyped() {
   if (keyCode === 32 && dt == 1) {
@@ -158,15 +144,15 @@ function keyTyped() {
   }
 }
 
-function mouseDragged() {
-  new Dot(mouseX, mouseY, 1, 0, 0, 10, 5)
+function mouseClicked() {
+  active = 1;
 }
 
 function textwall(x, y, ...args) {
   push();
   textSize(15);
   for (var a in args) {
-    text(args[a][0] + " = " + args[a][1], x, y + a * 15);
+    text(args[a][0] + ": " + nfs(round(args[a][1], 2)), x, y + a * 15);
   }
   pop();
 }
@@ -175,4 +161,46 @@ function btwn(bound1, bound2, num) {
   if (num >= Math.min(bound1, bound2) && num <= Math.max(bound1, bound2)) {
     return true;
   } else return false;
+}
+
+function collide(obj) {
+  obj.py = obj.pl.y;
+  obj.px = obj.pl.x;
+  obj.x = obj.l.x;
+  obj.y = obj.l.y;
+  for (var i = 0; i < wallist.length; i++) {
+    let wall = wallist[i];
+    if (wall !== obj.nocol) {
+      if (
+        btwn(wall.ab1.x, wall.ab2.x, obj.x) &&
+        btwn(wall.ab1.y, wall.ab2.y, obj.y)
+      ) {
+        obj.m = (obj.py - obj.y) / (obj.px - obj.x);
+        obj.b = obj.y - obj.m * obj.x;
+        if (isFinite(obj.m) == false) {
+          //tests for vertical slopes
+          obj.cx = obj.x;
+        } else if (isFinite(wall.m) == false) {
+          obj.cx = wall.ax;
+        } else {
+          obj.cx = (wall.b - obj.b) / (obj.m - wall.m);
+        }
+        obj.cy = wall.m * obj.cx + wall.b;
+        if (
+          //collision check
+          btwn(obj.x, obj.px, obj.cx) &&
+          btwn(obj.y, obj.py, obj.cy) &&
+          btwn(wall.ax, wall.bx, obj.cx) &&
+          btwn(wall.ay, wall.by, obj.cy)
+        ) {
+          obj.l = obj.pl.copy()
+          obj.pl = obj.l.copy();
+          obj.v.reflect(wall.vec.copy().rotate(HALF_PI));
+          obj.l.add(obj.v);
+          obj.v.mult(wall.damping);
+          obj.nocol = wall;
+        }
+      }
+    }
+  }
 }
