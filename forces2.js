@@ -8,44 +8,20 @@ function setup() {
   b1 = new Bob({
     x: 200,
     y: 100,
+    vx: 0,
     size: 30,
     link: [],
     ay: 0.0,
-    mass: 10,
+    mass: 1,
   });
   b2 = new Bob({
     x: 100,
     y: 100,
+    vx: 0,
     size: 25,
-    link: [[b1, 200]],
+    link: [],
     mass: 1,
-  });
-  b3 = new Bob({
-    x: 100,
-    y: 100,
-    size: 20,
-    link: [[b2, 50, 1]],
-    mass: 1,
-  });
-  b4 = new Bob({
-    x: 200,
-    y: 100,
-    size: 20,
-    link: [
-      [b3, 50, 1],
-      [b2, 50, 1],
-    ],
-    mass: 1,
-  });
-  b5 = new Bob({
-    x: 201,
-    y: 200,
-    size: 20,
-    link: [
-      [b3, 50, 1],
-      [b4, 50, 1],
-    ],
-    mass: 1,
+    ay: 0,
   });
 
   mainlist.forEach(function (e) {
@@ -62,7 +38,10 @@ var dotslist = [],
   mVy = 0,
   mVel = 0,
   mAx = 0,
-  mAy = 0;
+  mAy = 0,
+  down = 0,
+  dot1 = 0,
+  dot2 = 0;
 
 class Bob {
   constructor({
@@ -71,12 +50,12 @@ class Bob {
     vx = 0,
     vy = 0,
     ax = 0,
-    ay = 0.2,
+    ay = 0,
     color = [30, 100, 100],
     mass = 1,
     size = 1,
-    damping = 0.4,
-    k = 0.2,
+    damping = 0.1,
+    k = 0.01,
     link = [],
   }) {
     this.l = createVector(x, y);
@@ -115,6 +94,7 @@ class Bob {
 
   render() {
     push();
+    
     fill(this.color[0], this.color[1], this.color[2]);
     ellipse(this.l.x, this.l.y, this.size);
     drawArrow(this.l, this.f, "green", 50);
@@ -127,7 +107,7 @@ class Bob {
     for (var i in this.links) {
       if (this.links[i][2] == 1) {
         this.links[i][0].links.push([this, this.links[i][1]]);
-      }
+      } 
     }
   }
 }
@@ -144,8 +124,31 @@ function draw() {
     e.render();
   });
   paused();
-  textwall(windowWidth - 150, 20, ["mv", mAx]);
+  textwall(windowWidth - 150, 20, ["mv", mAx], ["vx", dotslist[1].v.x]);
 }
+  var dot1 = 0
+  var dot2 = 0
+  function mouseClicked() {
+    for (var i = 0; i<dotslist.length; i++) {
+    dot = dotslist[i]
+    if (dot.l.copy().sub(mouseX,mouseY).magSq() < dot.size*dot.size/2) {
+      if (dot1 == 0) {
+        dot1 = dot
+      } else {
+        dot2 = dot
+      }
+      console.log('hello')
+      }
+    }
+    if (dot1 != 0 && dot2 != 0) {
+      dot1.links.push([dot2,100,])
+      dot2.links.push([dot1,100,])
+      dot1 = 0
+      dot2 = 0
+    } else if (dot1 == 0 && dot2 == 0) {
+      new Bob({x:mouseX,y:mouseY,size:50})
+    }
+  }
 
 function keyTyped() {
   if (keyCode === 32 && dt == 1) {
