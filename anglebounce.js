@@ -3,7 +3,8 @@ function setup() {
   textSize(window.innerHeight / 20);
   curveTightness(0);
   colorMode(HSB, 100);
-  new Wall(0,200,800,200)
+  new Wall(0,500,800,500) 
+  new Wall(0,503,800,503)
 }
 
 var dotslist = [];
@@ -168,6 +169,7 @@ function collide(obj) {
   obj.px = obj.pl.x;
   obj.x = obj.l.x;
   obj.y = obj.l.y;
+  let clist = []
   for (var i = 0; i < wallist.length; i++) {
     let wall = wallist[i];
     if (wall !== obj.nocol) {
@@ -193,14 +195,28 @@ function collide(obj) {
           btwn(wall.ax, wall.bx, obj.cx) &&
           btwn(wall.ay, wall.by, obj.cy)
         ) {
-          obj.l = obj.pl.copy()
-          obj.pl = obj.l.copy();
-          obj.v.reflect(wall.vec.copy().rotate(HALF_PI));
-          obj.l.add(obj.v);
-          obj.v.mult(wall.damping);
-          obj.nocol = wall;
+          clist.push({x:obj.cx,y:obj.cy,w:wall})
         }
       }
     }
   }
+  let wally = 0
+  if (clist.length > 0) { wally = mindist(obj.l, clist);}
+  if (wally != 0) { 
+  obj.l = obj.pl.copy()
+  obj.pl = obj.l.copy();
+  obj.v.reflect(wally.vec.copy().rotate(HALF_PI));
+  obj.l.add(obj.v);
+  obj.v.mult(wally.damping);
+  obj.nocol = wally;
+  }
+}
+
+function mindist(pos, list) {
+  let distlist = [];
+  for (var i = 0; i < list.length; i++) {
+    distlist.push(pos.copy().sub(list[i].x, list[i].y).magSq());
+  }
+  let index = distlist.indexOf(min(distlist));
+  return list[index].w;
 }
