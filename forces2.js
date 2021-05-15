@@ -11,7 +11,7 @@ function setup() {
     vx: 0,
     size: 30,
     link: [],
-    ay: 0.0,
+    ay: 0.1,
     mass: 1,
   });
   b2 = new Bob({
@@ -41,7 +41,8 @@ var dotslist = [],
   mAy = 0,
   down = 0,
   dot1 = 0,
-  dot2 = 0;
+  dot2 = 0,
+  wallist = [];
 
 class Bob {
   constructor({
@@ -50,7 +51,7 @@ class Bob {
     vx = 0,
     vy = 0,
     ax = 0,
-    ay = 0,
+    ay = 0.1,
     color = [30, 100, 100],
     mass = 1,
     size = 1,
@@ -75,6 +76,7 @@ class Bob {
   update() {
     this.f.set(0, 0);
     this.vec = createVector(0, 0);
+    this.pl = this.l.copy();
     addA(this.a, this);
     for (var i in this.links) {
       let linky = this.links[i];
@@ -85,11 +87,15 @@ class Bob {
       this.f.add(this.vec.add(df));
       drawArrow(this.l, this.vec, "blue", 20);
     }
+    
   }
 
   finalupdate() {
     this.v.add(this.f.copy().div(this.mass).mult(dt));
     this.l.add(this.v.copy().mult(dt));
+    collide(this);
+    collide(this);
+    this.nocol = 0
   }
 
   render() {
@@ -99,7 +105,10 @@ class Bob {
     ellipse(this.l.x, this.l.y, this.size);
     drawArrow(this.l, this.f, "green", 50);
     drawArrow(this.l, this.v, "red", 5);
-
+    for (var i = 0; i< this.links.length; i++) {
+      drawArrow(this.l, this.links[i][0].l.copy().sub(this.l), 'orange', 0.5)
+    }
+    
     pop();
   }
 
@@ -109,6 +118,40 @@ class Bob {
         this.links[i][0].links.push([this, this.links[i][1]]);
       } 
     }
+  }
+}
+
+class Wall {
+  constructor(ax, ay, bx, by, ...args) {
+    this.ax = ax;
+    this.ay = ay;
+    this.bx = bx;
+    this.by = by;
+    this.m = (by - ay) / (bx - ax);
+    this.b = ay - this.m * ax;
+    this.vec = createVector(bx - ax, by - ay);
+    let abw = 20;
+    this.ab1 = createVector(min(ax, bx) - abw, min(ay, by) - abw);
+    this.ab2 = createVector(max(ax, bx) + abw, max(ay, by) + abw);
+    this.damping = 0.9;
+    wallist.push(this);
+    mainlist.push(this);
+  }
+
+  run() {
+    this.update();
+    this.render();
+  }
+
+  update() {}
+  finalupdate() {}
+  
+  render() {
+    push();
+    stroke(60, 100, 70);
+    strokeWeight(5);
+    line(this.ax, this.ay, this.bx, this.by);
+    pop();
   }
 }
 
@@ -125,7 +168,45 @@ function draw() {
   });
   paused();
   textwall(windowWidth - 150, 20, ["mv", mAx], ["vx", dotslist[1].v.x]);
-}
+  if (keyIsDown(UP_ARROW)) {
+    dotslist[0].l.y += 20
+    }
+  if (keyIsDown(DOWN_ARROW)) {
+    dotslist[0].l.y -= 20
+    }
+  if (keyIsDown(RIGHT_ARROW)) {
+    dotslist[0].l.x += 20
+    }
+  if (keyIsDown(LEFT_ARROW)) {
+    dotslist[0].l.x -= 20
+    }
+  if (keyIsDown(65)) {
+    dotslist[0].v.y = 0
+    dotslist[0].v.x = 0
+    }
+  
+  if (mouseIsPressed && keyIsDown(16)) {
+      if (down == 0) {
+        x1 = mouseX;
+        y1 = mouseY;
+      }
+      down = 1;
+      push();
+      fill(40);
+      stroke(67, 20, 100, 50);
+      strokeWeight(50);
+      line(x1, y1, mouseX, mouseY);
+      stroke(40,20,100,80)
+      strokeWeight(5)
+      line(x1,y1,mouseX,mouseY)
+      pop();
+    } else if (down == 1) {
+      new Wall(x1, y1, mouseX, mouseY);
+      down = 0;
+    }
+  
+}//draw
+
   var dot1 = 0
   var dot2 = 0
   function mouseClicked() {
@@ -137,18 +218,21 @@ function draw() {
       } else {
         dot2 = dot
       }
-      console.log('hello')
       }
     }
     if (dot1 != 0 && dot2 != 0) {
-      dot1.links.push([dot2,100,])
-      dot2.links.push([dot1,100,])
+      let dist = dot1.l.copy().sub(mouseX,mouseY).mag()
+      dot1.links.push([dot2,dist])
+      dot2.links.push([dot1,dist])
       dot1 = 0
       dot2 = 0
     } else if (dot1 == 0 && dot2 == 0) {
       new Bob({x:mouseX,y:mouseY,size:50})
     }
-  }
+    
+    
+  }//mouseClicked
+  
 
 function keyTyped() {
   if (keyCode === 32 && dt == 1) {
@@ -224,4 +308,67 @@ function drawArrow(base, vec, myColor, scal) {
     triangle(0, arrowSize / 2, 0, -arrowSize / 2, arrowSize, 0);
     pop();
   }
+}
+
+function btwn(bound1, bound2, num) {
+  if (num >= Math.min(bound1, bound2) && num <= Math.max(bound1, bound2)) {
+    return true;
+  } else return false;
+}
+
+function collide(obj) {
+  obj.py = obj.pl.y;
+  obj.px = obj.pl.x;
+  obj.x = obj.l.x;
+  obj.y = obj.l.y;
+  let clist = []
+  for (var i = 0; i < wallist.length; i++) {
+    let wall = wallist[i];
+    if (wall !== obj.nocol) {
+      if (
+        btwn(wall.ab1.x, wall.ab2.x, obj.x) &&
+        btwn(wall.ab1.y, wall.ab2.y, obj.y)
+      ) {
+        obj.m = (obj.py - obj.y) / (obj.px - obj.x);
+        obj.b = obj.y - obj.m * obj.x;
+        if (isFinite(obj.m) == false) {
+          //tests for vertical slopes
+          obj.cx = obj.x;
+        } else if (isFinite(wall.m) == false) {
+          obj.cx = wall.ax;
+        } else {
+          obj.cx = (wall.b - obj.b) / (obj.m - wall.m);
+        }
+        obj.cy = wall.m * obj.cx + wall.b;
+        if (
+          //collision check
+          btwn(obj.x, obj.px, obj.cx) &&
+          btwn(obj.y, obj.py, obj.cy) &&
+          btwn(wall.ax, wall.bx, obj.cx) &&
+          btwn(wall.ay, wall.by, obj.cy)
+        ) {
+          clist.push({x:obj.cx,y:obj.cy,w:wall})
+        }
+      }
+    }
+  }
+  let wally = 0
+  if (clist.length > 0) { wally = mindist(obj.l, clist);}
+  if (wally != 0) { 
+  obj.l = obj.pl.copy()
+  obj.pl = obj.l.copy();
+  obj.v.reflect(wally.vec.copy().rotate(HALF_PI));
+  obj.l.add(obj.v);
+  obj.v.mult(wally.damping);
+  obj.nocol = wally;
+  }
+}
+
+function mindist(pos, list) {
+  let distlist = [];
+  for (var i = 0; i < list.length; i++) {
+    distlist.push(pos.copy().sub(list[i].x, list[i].y).magSq());
+  }
+  let index = distlist.indexOf(min(distlist));
+  return list[index].w;
 }
