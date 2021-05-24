@@ -5,7 +5,7 @@ function setup() {
   colorMode(HSB, 100);
   debug = 0;
 
-  new Wall(0, windowHeight - 10, windowWidth, windowHeight - 10);
+  new Wall(0, windowHeight - 10, windowWidth - 20, windowHeight - 10);
 
   mainlist.forEach(function (e) {
     e.initialize();
@@ -25,7 +25,8 @@ var dotslist = [],
   down = 0,
   dot1 = 0,
   dot2 = 0,
-  wallist = [];
+  wallist = [],
+  instruct = 1;
 
 class Bob {
   constructor({
@@ -38,8 +39,8 @@ class Bob {
     color = [30, 100, 100],
     mass = 1,
     size = 1,
-    damping = 0.1,
-    k = 0.1,
+    damping = 0.3,
+    k = 0.3,
     link = [],
   }) {
     this.l = createVector(x, y);
@@ -143,7 +144,7 @@ class Wall {
 }
 
 function draw() {
-  /////////////////////draw
+  /////////////////////draw////////////////////////
   background(255);
   frameRate(60);
   mVelocity();
@@ -155,15 +156,6 @@ function draw() {
     e.render();
   });
   paused();
-  instructions(
-    20, 
-    120,
-    ["Place a dot", "click"],
-    ["Link two dots", "click on one dot, then another"],
-    ["Pause simulation", "space"],
-    ["Draw wall", "shift + click"],
-    ["Close instructions", "i"]
-  );
   textwall(
     windowWidth - 150,
     20,
@@ -172,6 +164,17 @@ function draw() {
     ["walls", wallist.length],
     ["points", dotslist.length]
   );
+  instructions(
+    20, 
+    120,
+    ["Place a dot", "click"],
+    ["Link two dots", "click on one dot, then another"],
+    ["Pause simulation", "space"],
+    ["Draw wall", "shift + click"],
+		["Delete dot", "a + click"],
+    ["Close instructions", "i"]
+  );
+  if (keyIsPressed == true) text(key,width/2,30);
 
   if (mouseIsPressed && keyIsDown(16)) {
     if (down == 0) {
@@ -200,10 +203,25 @@ function mouseClicked() {
   for (var i = 0; i < dotslist.length; i++) {
     dot = dotslist[i];
     if (dot.l.copy().sub(mouseX, mouseY).magSq() < (dot.size * dot.size) / 2) {
-      if (dot1 == 0) {
-        dot1 = dot;
+      if (keyIsDown(65)) {
+        for (var d = 0; d<dotslist.length; d++) {
+          for (var a = 0; a<dotslist[d].links.length; a++) {
+            if (dotslist[d].links[a][0] == dot) {
+              dotslist[d].links.splice(a,1)
+              //delete any links to the deleted bob
+            }
+          }
+        }
+        let index = mainlist.indexOf(dot);
+        mainlist.splice(index, 1);
+        index = dotslist.indexOf(dot);
+        dotslist.splice(index, 1);
       } else {
-        dot2 = dot;
+        if (dot1 == 0) {
+          dot1 = dot;
+        } else {
+          dot2 = dot;
+        }
       }
     }
   }
@@ -213,22 +231,28 @@ function mouseClicked() {
     dot2.links.push([dot1, dist]);
     dot1 = 0;
     dot2 = 0;
-  } else if (dot1 == 0 && dot2 == 0 && down == 0) {
+  } else if (dot1 == 0 && dot2 == 0 && down == 0 && !keyIsDown(65)) {
     new Bob({
       x: mouseX,
       y: mouseY,
       size: 40,
-      color: [Math.random() * 100, 100, 100],
+      color: [Math.random() * 100, Math.random() * 200, Math.random() * 200],
     });
   }
 } //mouseClicked
 
 function keyTyped() {
-  if (keyCode === 32 && dt == 1) {
-    dt = 0;
-  } else {
-    dt = 1;
+  if (keyCode === 32) {
+    switch (dt) {
+      case 0:
+        dt = 1;
+        break;
+      case 1:
+        dt = 0;
+        break;
+    }
   }
+  text(key,10,10)
 }
 
 function textwall(x, y, ...args) {
@@ -284,8 +308,9 @@ function paused() {
 function instructions(x, y, ...args) {
   push();
   textSize(window.innerHeight / 20);
-  if (key == 'i') {
-    fill(100,100,100,0)
+  if (key == "i" || instruct == 0) {
+    instruct = 0;
+    fill(100, 100, 100, 0);
   }
   for (var a in args) {
     text(args[a][0] + ": " + args[a][1], x, y + a * 50);
